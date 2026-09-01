@@ -1,0 +1,152 @@
+# =====================================================================
+# Config per run.py
+# =====================================================================
+
+# --- Input dati -------------------------------------------------------
+patents:
+  path: "data/patents/patents_en_for_isco.parquet"
+  id_col: "patent_id"          # <-- verificare nome esatto colonna id
+  title_col: "title"
+  text_col: "patent_text"      # abstract gia' estratto
+
+esco:
+  path: "classification/esco/esco_isco_competences_knowledge_dataset_v1_2_1.csv"
+  sep: ";"
+  isco_level: "isco_4digit_code"   # oppure "isco_3digit_code"
+  essential_only: true
+
+# --- Composizione testo skill ------------------------------------------
+skill_text:
+  use_label: true
+  use_alt_labels: true
+  max_alt_labels: 3            # 0 = usa tutti i sinonimi disponibili
+  use_description: true
+  max_description_chars: 300   # tronca description lunghe, 0 = nessun limite
+
+# --- Peso di specificita' (IDF-like) ------------------------------------
+idf_weighting:
+  enabled: true
+
+# --- Modello di embedding ------------------------------------------------
+# Scegli UNA voce da "active_model"; "candidates" documenta le opzioni
+# disponibili e permette confronti multi-modello via --model.
+embedding:
+  active_model: "e5_base"
+
+  candidates:
+    e5_base:
+      provider: "huggingface"
+      model_name: "intfloat/multilingual-e5-base"
+      dim: 768
+      prefix_style: "e5"     # richiede prefisso "query: " / "passage: "
+
+    e5_large:
+      provider: "huggingface"
+      model_name: "intfloat/multilingual-e5-large"
+      dim: 1024
+      prefix_style: "e5"
+
+    labse:
+      provider: "huggingface"
+      model_name: "sentence-transformers/LaBSE"
+      dim: 768
+      prefix_style: "none"
+
+    distiluse_multilingual:
+      provider: "huggingface"
+      model_name: "sentence-transformers/distiluse-base-multilingual-cased-v1"
+      dim: 512
+      prefix_style: "none"
+
+    minilm_multilingual:
+      provider: "huggingface"
+      model_name: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+      dim: 384
+      prefix_style: "none"
+
+    mpnet_multilingual:
+      provider: "huggingface"
+      model_name: "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+      dim: 768
+      prefix_style: "none"
+
+    sbert_italian:
+      provider: "huggingface"
+      model_name: "nickprock/sentence-bert-base-italian-uncased"
+      dim: 768
+      prefix_style: "none"
+
+    # embeddinggemma_300m:
+    #   provider: "huggingface"
+    #   model_name: "google/embeddinggemma-300m"
+    #   dim: 768
+    #   prefix_style: "none"
+    #   note: "puo' richiedere autenticazione HuggingFace (modello gated)"
+
+    bge_m3:
+      provider: "huggingface"
+      model_name: "BAAI/bge-m3"
+      dim: 1024
+      prefix_style: "none"
+
+  # per i modelli con prefix_style: "e5", i brevetti sono trattati come
+  # "query" e le skill ESCO come "passage" (asimmetria query/documento
+  # tipica del retrieval); per gli altri modelli il prefisso e' ignorato
+  patent_prefix_e5: "query: "
+  skill_prefix_e5: "passage: "
+
+  batch_size: 64                # T4 (16GB): 32-64 sicuro con modelli grandi
+                                 # A100 (40/80GB): puoi salire a 128-256
+  normalize_embeddings: true    # cosine sim = dot product
+
+  device: "cuda"                # "cuda" per T4/A100, "cpu" come fallback
+  fp16: true                    # mixed precision, consigliato su A100;
+                                 # su T4 funziona ma il guadagno e' minore
+
+# --- Caching --------------------------------------------------------------
+cache:
+  enabled: true
+  dir: "./cache_embeddings"
+  # le skill vengono cachate per (modello, prefisso, testi) cosi' da non
+  # re-imbeddare la libreria ESCO ad ogni run se non cambia nulla
+
+# --- Aggregazione e diagnostica --------------------------------------------
+aggregation:
+  method: "max"          # opzioni: "max", "topk_mean"
+  top_k_mean_k: 3         # usato solo se method = "topk_mean"
+
+# --- Segnali: producer (chi ha creato il brevetto) e user (chi lo userà) ---
+# Condividono lo stesso embedding di brevetti e skill (calcolato una sola
+# volta); cambia solo quali skill_type contano per l'aggregazione.
+signals:
+  producer:
+    skill_types: null              # null = tutte (skill/competence + knowledge)
+  user:
+    skill_types: ["skill/competence"]   # solo skill formulate come azioni,
+                                          # proxy delle "task svolte"
+
+# --- Elaborazione a chunk (necessaria per corpora grandi, es. 100k brevetti) ---
+matching:
+  chunk_size: 5000        # brevetti processati insieme; abbassare se OOM su GPU
+                           # (es. 2000 su T4 con modelli grandi come e5-large)
+  progress_every: 1        # stampa avanzamento ogni N chunk (1 = ogni chunk)
+  top_n_isco: 2             # quanti codici ISCO (3 e 4 digit) salvare per brevetto
+
+diagnostics:
+  top_k_for_gap: 5
+
+# --- CSV di validazione manuale (sample random di brevetti) ------------------
+validation_sample:
+  enabled: true
+  n_sample: 1000
+  snippet_chars: 500       # lunghezza max di patent_text_snippet, per leggibilita'
+  random_state: 42          # riproducibilita' del sample
+  filename: "validation_sample.csv"
+
+# --- Output -----------------------------------------------------------------
+output:
+  dir: "./output"
+  scores_filename: "patent_isco_scores.csv"
+  diagnostics_filename: "patent_isco_diagnostics.csv"
+  # se si testano piu' modelli in sequenza, ogni run aggiunge una riga qui:
+  comparison_filename: "model_comparison_summary.csv"

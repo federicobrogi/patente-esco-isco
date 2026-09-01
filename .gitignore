@@ -1,0 +1,16 @@
+# dati (spesso pesanti/riservati, non versionare)
+data/
+classification/
+
+# output e cache generati
+cache_embeddings/
+output/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# altro
+.DS_Store

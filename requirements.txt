@@ -1,0 +1,9 @@
+pandas>=2.0
+numpy>=1.24
+pyyaml>=6.0
+pyarrow>=14.0          # lettura file .parquet
+sentence-transformers>=3.0
+torch>=2.1             # con supporto CUDA sulla VM Azure (T4/A100)
+
+# opzionale, solo se si usa il provider "azure_openai" nel config
+openai>=1.30
