@@ -1,4 +1,4 @@
-# patent-isco-matching
+# patent-esco-isco
 
 Matching semantico brevetti <-> codici ISCO tramite skill/knowledge ESCO,
 al posto delle sole descrizioni ISCO a 3/4 cifre (troppo generiche rispetto
