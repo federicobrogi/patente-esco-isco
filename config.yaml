@@ -3,11 +3,40 @@
 # =====================================================================
 
 # --- Input dati -------------------------------------------------------
+# Il file NON viene copiato/duplicato: e' un symlink verso il file reale
+# nel repo patent-user-producer (repo separato, non modificato), creato
+# manualmente sulla VM con:
+#   ln -s ~/projects/patent-user-producer/data/raw/patents_eda_raw.parquet \
+#         data/patents/patents_eda_raw.parquet
+# Si usa il file "raw" (non "patents_eda_descriptors.parquet") perche'
+# quest'ultimo applica gia' la regola di costruzione testo specifica del
+# progetto EDA (title+abstract con fallback su description), che e' una
+# scelta metodologica loro, non necessariamente adatta al nostro matching.
 patents:
-  path: "data/patents/patents_en_for_isco.parquet"
-  id_col: "patent_id"          # <-- verificare nome esatto colonna id
+  path: "data/patents/patents_eda_raw.parquet"
+  id_col: "id"
   title_col: "title"
-  text_col: "patent_text"      # abstract gia' estratto
+  text_col: "abstract"
+
+# filtro opzionale sulla lingua, applicato in fase di caricamento.
+# NOTA: la colonna "language" nel file patents_eda_raw.parquet e' vuota
+# su tutte le 105.195 righe (verificato sui dati reali) - inutilizzabile.
+# La colonna pulita e' "ita_only" (0 = non italiano, 1 = italiano;
+# 103.554 vs 1.641 righe, ~1.6% del corpus).
+#
+# DEFAULT: enabled=false, si tengono TUTTI i brevetti (anche italiani).
+# I modelli di embedding scelti sono multilingue apposta per gestire
+# testo in lingue diverse nello stesso spazio semantico; escludere
+# l'italiano a monte butterebbe via il motivo per cui e' stato scelto un
+# modello multilingue invece di uno mono-lingua inglese. La colonna
+# ita_only viene comunque propagata negli output (vedi validation_sample
+# e i CSV per segnale) cosi' da poter verificare a posteriori se il
+# matching cross-lingua (IT->EN) e' sistematicamente piu' debole, e
+# decidere se filtrare con dati alla mano invece che a priori.
+patents_filter:
+  enabled: false
+  language_col: "ita_only"
+  keep_values: [0]
 
 esco:
   path: "classification/esco/esco_isco_competences_knowledge_dataset_v1_2_1.csv"

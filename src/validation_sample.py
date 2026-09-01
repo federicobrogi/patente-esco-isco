@@ -31,18 +31,23 @@ def build_validation_sample(
     n_sample: int,
     snippet_chars: int,
     random_state: int,
+    language_col: str = None,
 ) -> pd.DataFrame:
     """signal_results: dict nome_segnale -> {"esco_top1": df, "isco3_topn":
     df, "isco4_topn": df} (l'output di match_patents_two_stage_multi_signal).
     Per ogni segnale, le colonne nel CSV finale sono prefissate con il nome
     del segnale (es. producer_esco_occupation_code, user_esco_score, ...),
     cosi' i due segnali sono affiancati sulla stessa riga per il confronto
-    manuale."""
+    manuale. Se language_col e' fornito ed esiste in patents_df, viene
+    incluso come colonna (es. per distinguere brevetti italiani/non
+    italiani durante il controllo manuale)."""
 
     sample_idx = patents_df.sample(n=min(n_sample, len(patents_df)), random_state=random_state).index
 
     out = pd.DataFrame(index=sample_idx)
     out["patent_id"] = patents_df.loc[sample_idx, id_col].values
+    if language_col is not None and language_col in patents_df.columns:
+        out[language_col] = patents_df.loc[sample_idx, language_col].values
     out["patent_title"] = patents_df.loc[sample_idx, text_col_title].values
     out["patent_text_snippet"] = (
         patents_df.loc[sample_idx, text_col_body].fillna("").str.slice(0, snippet_chars).values

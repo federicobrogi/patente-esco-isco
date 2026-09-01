@@ -91,9 +91,19 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     id_col = cfg["patents"]["id_col"]
 
+    # colonna lingua (es. ita_only) propagata negli output per permettere
+    # una validazione post-hoc: verificare se il matching cross-lingua
+    # (es. brevetti italiani su skill ESCO in inglese) e' sistematicamente
+    # piu' debole, invece di escluderlo a priori. Presente solo se
+    # patents_filter.language_col e' configurato ed esiste nel corpus.
+    lang_col = cfg.get("patents_filter", {}).get("language_col")
+    has_lang_col = lang_col is not None and lang_col in patents.columns
+
     def _with_patent_id(df: pd.DataFrame) -> pd.DataFrame:
         out = df.copy()
         out.insert(0, "patent_id", patents[id_col].values)
+        if has_lang_col:
+            out.insert(1, lang_col, patents[lang_col].values)
         return out
 
     summary_rows = []
@@ -121,6 +131,16 @@ def main():
         print(f"[{signal_name}] avg_max_score={diag['max_score'].mean():.4f}  "
               f"avg_topk_gap={diag['topk_gap'].mean():.4f}")
 
+        # diagnostica stratificata per lingua, se disponibile: permette di
+        # verificare se il segnale cross-lingua (es. italiano) e' piu'
+        # debole di quello intra-lingua, senza aver escluso nulla a monte
+        if has_lang_col:
+            diag_with_lang = diag.copy()
+            diag_with_lang[lang_col] = patents[lang_col].values
+            by_lang = diag_with_lang.groupby(lang_col)[["max_score", "topk_gap"]].mean()
+            print(f"[{signal_name}] diagnostica per '{lang_col}':")
+            print(by_lang.to_string())
+
         summary_rows.append({
             "model": model_key,
             "signal": signal_name,
@@ -145,6 +165,7 @@ def main():
             n_sample=val_cfg.get("n_sample", 1000),
             snippet_chars=val_cfg.get("snippet_chars", 500),
             random_state=val_cfg.get("random_state", 42),
+            language_col=lang_col if has_lang_col else None,
         )
         sample_path = out_dir / f"{model_key}_{val_cfg.get('filename', 'validation_sample.csv')}"
         sample_df.to_csv(sample_path, index=False)
