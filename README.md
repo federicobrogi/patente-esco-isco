@@ -71,3 +71,30 @@ Ogni run scrive in `output/`:
 trattati come query, le skill ESCO come passage. Gestito automaticamente
 dal codice quando `prefix_style: "e5"` e' impostato nel config per quel
 modello; per gli altri modelli il prefisso non viene applicato.
+
+## Pipeline professionale ESCO
+
+La pipeline aggiuntiva confronta ogni brevetto con un descriptor per ciascuna
+professione ESCO: `job title + tutte le essential skill_label`. Produce due
+varianti per modello (`title + abstract` e `title + abstract + first claim`),
+TOP-10, margine TOP1-TOP2 e skill determinante del TOP1. La pipeline storica
+`run.py` resta invariata.
+
+Il dataset configurato in `occupation_descriptor_config.yaml` puo' essere CSV
+o Parquet e deve contenere ID, titolo, abstract e primo claim. Per isolare la
+versione di Transformers richiesta da GTE:
+
+```bash
+python -m pip install --target vendor_gte transformers==4.51.3 tokenizers==0.21.4
+```
+
+Smoke test e run completa su Azure A100:
+
+```bash
+python run_occupation_descriptor.py --config occupation_descriptor_config.yaml --limit 30
+python run_occupation_descriptor.py --config occupation_descriptor_config.yaml
+```
+
+`--models bge_m3 qwen3_embedding_4b` limita i modelli. I risultati parziali
+sono ripresi automaticamente; `--overwrite` forza una nuova esecuzione. Ogni
+modello gira in un processo separato, liberando la VRAM e isolando GTE.

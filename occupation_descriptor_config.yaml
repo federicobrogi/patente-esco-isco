@@ -1,0 +1,18 @@
+patents:
+  path: "data/patents/patents_with_first_claim.parquet"
+  id_col: "id"
+  title_col: "title"
+  abstract_col: "abstract"
+  first_claim_col: "first_claim"
+esco:
+  path: "classification/esco/esco_isco_competences_knowledge_dataset_v1_2_1.csv"
+  essential_only: true
+embedding:
+  models: [bge_m3, e5_base, e5_large, gte_multilingual, qwen3_embedding_0_6b, labse, distiluse_multilingual, minilm_multilingual, mpnet_multilingual, embeddinggemma_300m, qwen3_embedding_4b]
+matching:
+  patent_batch_size: 512
+  top_n: 10
+runtime:
+  gte_compatibility_path: "vendor_gte"
+output:
+  dir: "output/occupation_descriptor"
