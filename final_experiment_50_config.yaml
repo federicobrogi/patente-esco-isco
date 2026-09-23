@@ -1,0 +1,58 @@
+experiment:
+  name: final_50_scale_and_truncation
+  seed: 42
+
+patents:
+  path: data/patents/patents_50_annotated_benchmark.csv
+  id_col: patent_id
+  title_col: patent_title
+  abstract_col: patent_abstract
+  first_claim_col: first_claim
+
+esco:
+  path: classification/esco/esco_isco_competences_knowledge_dataset_v1_2_1.csv
+
+common:
+  top_n: 10
+  common_token_budget: 512
+  descriptor_variants:
+    - title_abstract
+    - title_abstract_first_claim
+
+scale_experiment:
+  models:
+    - qwen3_embedding_0_6b
+    - qwen3_embedding_4b
+    - qwen3_embedding_8b
+    - gte_qwen2_7b_instruct
+    - bge_multilingual_gemma2
+  token_conditions:
+    - common_512
+    - native
+  truncation_strategy: head_only
+
+truncation_experiment:
+  models:
+    - bge_m3
+    - e5_base
+    - qwen3_embedding_0_6b
+    - embeddinggemma_300m
+  token_budget: 512
+  strategies:
+    - head_only
+    - head_tail
+    - field_budget
+    - chunk_max
+  field_budget:
+    title_fraction: 0.15
+    abstract_fraction: 0.45
+    first_claim_fraction: 0.40
+  head_tail:
+    head_fraction: 0.70
+  chunking:
+    overlap_tokens: 64
+
+runtime:
+  device: cuda
+  output_dir: output/final_50_scale_and_truncation
+
